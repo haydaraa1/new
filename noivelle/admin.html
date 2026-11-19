@@ -10,6 +10,57 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,'Segoe UI',sans-serif;font-size:15px;line-height:1.7}
 button,input,select,textarea{font:inherit;color:inherit}
+
+  .auth-gate {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 30px;
+  border: 1px solid var(--rule);
+  border-radius: 18px;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.auth-card h1 {
+  color: var(--gold-d);
+  letter-spacing: 5px;
+}
+
+.auth-card input {
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: 9px;
+  direction: ltr;
+}
+
+.auth-card label {
+  text-align: right;
+}
+
+#authMessage {
+  color: var(--red);
+  font-size: 13px;
+}
+
+body:not(.authenticated) > :not(#authGate) {
+  display: none !important;
+}
+
+body.authenticated > #authGate {
+  display: none !important;
+}
 header{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 header h1{margin:0;font-size:18px;color:var(--gold-d);flex:1;min-width:140px}
 .btn{border:1px solid var(--gold);background:transparent;color:var(--gold-d);padding:7px 16px;border-radius:999px;cursor:pointer}
@@ -58,6 +109,27 @@ h3{margin:22px 0 10px;color:var(--gold-d);font-size:16px}h3:first-child{margin-t
 </head>
 <body>
 
+<section id="authGate" class="auth-gate">
+  <form id="authForm" class="auth-card">
+    <h1>INVITO</h1>
+    <h2>دخول الإدارة</h2>
+    <p>هذه الصفحة مخصصة لمدير الموقع فقط.</p>
+
+    <label>البريد الإلكتروني</label>
+    <input id="authEmail" type="email"
+      value="h88825392@gmail.com" required>
+
+    <label>كلمة المرور</label>
+    <input id="authPassword" type="password"
+      autocomplete="current-password" required>
+
+    <button class="btn fill" id="authSubmit" type="submit">
+      تسجيل الدخول
+    </button>
+
+    <p id="authMessage"></p>
+  </form>
+</section>
 <header>
   <h1 id="hTitle">لوحة التحكم</h1>
   <span class="status" id="stat"></span>
@@ -170,7 +242,7 @@ h3{margin:22px 0 10px;color:var(--gold-d);font-size:16px}h3:first-child{margin-t
 </div></div>
 
 <div id="toast"></div>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 (function(){
@@ -345,5 +417,104 @@ $('#catList').oninput=()=>{collectSite();setDirty(true);fillCatF()};
 $('#upLogo').onchange=async e=>{const f=e.target.files[0];if(!f)return;const ext=(f.name.split('.').pop()||'png').toLowerCase();const p='brand/logo.'+ext;await putFile(p,f);data.site.logo=p;fillSite();setDirty(true);toast('تم رفع الشعار')};
 })();
 </script>
+  <script>
+(function () {
+  const SUPABASE_URL =
+    'https://rdaujxfsjkdvkedtemgu.supabase.co';
+
+  const SUPABASE_KEY =
+    'sb_publishable_kbS6avD29KV-ILggyYAgRg_L3r7MTHd';
+
+  const ADMIN_EMAIL = 'h88825392@gmail.com';
+
+  const client = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  const form = document.getElementById('authForm');
+  const message = document.getElementById('authMessage');
+  const submit = document.getElementById('authSubmit');
+
+  async function verifyAdmin(session) {
+    if (!session) return false;
+
+    const { data: userData, error: userError } =
+      await client.auth.getUser();
+
+    if (
+      userError ||
+      !userData.user ||
+      userData.user.email?.toLowerCase() !== ADMIN_EMAIL
+    ) {
+      await client.auth.signOut();
+      message.textContent = 'هذا الحساب غير مخوّل للإدارة.';
+      document.body.classList.remove('authenticated');
+      return false;
+    }
+
+    const { data, error } =
+      await client.rpc('is_invito_admin');
+
+    if (error || data !== true) {
+      await client.auth.signOut();
+      message.textContent = 'فشل التحقق من صلاحية المدير.';
+      document.body.classList.remove('authenticated');
+      return false;
+    }
+
+    document.body.classList.add('authenticated');
+    message.textContent = '';
+    return true;
+  }
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+
+    const email =
+      document.getElementById('authEmail').value.trim().toLowerCase();
+
+    const password =
+      document.getElementById('authPassword').value;
+
+    if (email !== ADMIN_EMAIL) {
+      message.textContent = 'استخدم بريد المدير المعتمد.';
+      return;
+    }
+
+    submit.disabled = true;
+    submit.textContent = 'جارٍ التحقق...';
+
+    const { data, error } =
+      await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+    if (error) {
+      message.textContent =
+        'فشل تسجيل الدخول. تحقق من البريد وكلمة المرور.';
+    } else {
+      await verifyAdmin(data.session);
+    }
+
+    submit.disabled = false;
+    submit.textContent = 'تسجيل الدخول';
+  });
+
+  client.auth.getSession().then(({ data, error }) => {
+    if (error) {
+      message.textContent = 'تعذّر استعادة الجلسة.';
+      return;
+    }
+
+    if (data.session) {
+      verifyAdmin(data.session);
+    }
+  });
+
+})();
+</script>
 </body>
+  
 </html>
