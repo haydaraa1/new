@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>القوالب</title>
+<link rel="icon" href="favicon.ico">
+<style>
+:root{--bg:#F7F2EA;--paper:#FFFDF8;--gold:#B9955E;--ink:#3A322A;--muted:#7C7064;--rule:#E4D6BC}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,'Segoe UI',sans-serif;line-height:1.7}
+header{text-align:center;padding:28px 16px 8px}
+header img{height:64px;max-width:70%;object-fit:contain}
+header h1{margin:6px 0 0;font-size:22px;font-weight:400}
+header p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.price{text-align:center;margin:10px 0 0;font-size:15px}.price b{color:var(--gold)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:16px;justify-content:safe center}
+.chips button{border:1px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:999px;padding:6px 16px;cursor:pointer;white-space:nowrap;font:inherit;font-size:14px}
+.chips button.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.chips small{opacity:.7;margin-inline-start:4px}
+main{max-width:1000px;margin:auto;padding:4px 16px 30px;display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(min-width:760px){main{grid-template-columns:repeat(3,1fr);gap:22px}}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:18px;overflow:hidden;text-decoration:none;color:inherit;display:flex;flex-direction:column}
+.card .im{aspect-ratio:3/4;background:var(--rule);overflow:hidden}
+.card img{width:100%;height:100%;object-fit:cover;transition:transform .6s;display:block}
+.card:hover img{transform:scale(1.04)}
+.card .tx{padding:10px 12px 14px;text-align:center}
+.card small{color:var(--gold);font-size:12px;letter-spacing:.5px}
+.card h2{margin:0;font-size:16px;font-weight:600}
+.card p{margin:4px 0 0;font-size:12.5px;color:var(--muted)}
+.card .pr{display:block;margin-top:6px;font-size:13px;color:var(--gold);font-weight:700}
+.card .go{display:flex;gap:6px;justify-content:center;margin-top:10px}
+.card .go span{border:1px solid var(--gold);color:var(--gold);border-radius:99px;padding:3px 14px;font-size:13px}
+.card .go span.f{background:var(--gold);color:#fff}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:20px}
+</style>
+</head>
+<body>
+<header id="hd"></header>
+<div class="price" id="pr"></div>
+<div class="chips" id="chips"></div>
+<main id="grid"></main>
+<footer id="ft"></footer>
+
+<script>
+(async function(){
+  const $=s=>document.querySelector(s);
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let d;
+  try{d=await (await fetch('site-data.json',{cache:'no-store'})).json()}catch(e){$('#grid').innerHTML='<p class="empty">تعذّر تحميل site-data.json — شغّل الموقع عبر خادم (مثل Vercel أو python -m http.server).</p>';return}
+  const s=d.site||{};
+  const r=document.documentElement.style;
+  if(s.primaryColor)r.setProperty('--gold',s.primaryColor);
+  if(s.bgColor)r.setProperty('--bg',s.bgColor);
+  if(s.inkColor)r.setProperty('--ink',s.inkColor);
+  document.title=(s.name||'')+' — القوالب';
+  if(s.favicon)document.querySelector('link[rel=icon]').href=s.favicon;
+  $('#hd').innerHTML=(s.logo?`<img src="${esc(s.logo)}" alt="${esc(s.name)}">`:`<h1>${esc(s.name)}</h1>`)+(s.tagline?`<p>${esc(s.tagline)}</p>`:'');
+  const money=n=>Number(n).toLocaleString('ar-IQ-u-nu-latn')+' '+(s.currency||'');
+  $('#pr').innerHTML=s.price?`سعر الدعوة <b>${money(s.price)}</b>`:'';
+  $('#ft').textContent=s.footer||'';
+
+  const all=(d.templates||[]).filter(t=>t.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));
+  const cats=(d.categories&&d.categories.length?d.categories:[...new Set(all.map(t=>t.category))]);
+  let cur='';
+  function orderLink(t){
+    const msg=encodeURIComponent((s.orderMessage||'مرحباً، أرغب بطلب دعوة من قالب:')+' '+t.title+' ('+t.id+')');
+    if(s.whatsapp)return `https://wa.me/${String(s.whatsapp).replace(/\D/g,'')}?text=${msg}`;
+    return s.instagram||'';
+  }
+  function chips(){
+    $('#chips').innerHTML=[['','الكل',all.length],...cats.map(c=>[c,c,all.filter(t=>t.category===c).length])]
+      .filter(x=>x[0]===''||x[2]).map(x=>`<button data-c="${esc(x[0])}" class="${x[0]===cur?'on':''}">${esc(x[1])}<small>${x[2]}</small></button>`).join('');
+  }
+  function grid(){
+    const L=all.filter(t=>!cur||t.category===cur);
+    $('#grid').innerHTML=L.map(t=>{
+      const link=orderLink(t);
+      return `<a class="card" href="${esc(t.preview)}"><div class="im"><img loading="lazy" src="${esc(t.thumbnail)}" alt="${esc(t.title)}"></div>
+      <div class="tx"><small>${esc(t.category)}</small><h2>${esc(t.title)}</h2>${t.description?`<p>${esc(t.description)}</p>`:''}
+      ${t.price?`<span class="pr">${money(t.price)}</span>`:''}
+      <div class="go"><span>معاينة</span>${link?`<span class="f" data-o="${esc(link)}">${esc(s.orderButton||'اطلب')}</span>`:''}</div></div></a>`}).join('')||'<p class="empty">لا توجد قوالب في هذا القسم.</p>';
+  }
+  $('#chips').onclick=e=>{const b=e.target.closest('button');if(!b)return;cur=b.dataset.c;chips();grid()};
+  $('#grid').onclick=e=>{const o=e.target.closest('[data-o]');if(o){e.preventDefault();window.open(o.dataset.o,'_blank','noopener')}};
+  chips();grid();
+})();
+</script>
+</body>
+</html>

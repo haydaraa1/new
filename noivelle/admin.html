@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لوحة التحكم</title>
+<style>
+:root{--bg:#F7F2EA;--paper:#FFFDF8;--gold:#B9955E;--gold-d:#8A6A3B;--rule:#E4D6BC;--ink:#3A322A;--muted:#7C7064;--red:#a8432f;--ok:#4d7a4a}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1913;--paper:#27221a;--rule:#463d2e;--ink:#efe6d6;--muted:#a89c88;--gold-d:#d3b07a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Tahoma,'Segoe UI',sans-serif;font-size:15px;line-height:1.7}
+button,input,select,textarea{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header h1{margin:0;font-size:18px;color:var(--gold-d);flex:1;min-width:140px}
+.btn{border:1px solid var(--gold);background:transparent;color:var(--gold-d);padding:7px 16px;border-radius:999px;cursor:pointer}
+.btn:hover{background:var(--gold);color:#fff}
+.btn.fill{background:var(--gold);color:#fff}
+.btn.red{border-color:var(--red);color:var(--red)}.btn.red:hover{background:var(--red);color:#fff}
+.btn.sm{padding:3px 11px;font-size:13px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+nav{display:flex;gap:6px;padding:12px 16px 0;max-width:1100px;margin:auto;flex-wrap:wrap}
+nav button{border:1px solid var(--rule);background:var(--paper);padding:7px 18px;border-radius:12px 12px 0 0;cursor:pointer;border-bottom:none}
+nav button.on{background:var(--gold);color:#fff;border-color:var(--gold)}
+main{max-width:1100px;margin:auto;padding:0 16px 80px}
+.panel{background:var(--paper);border:1px solid var(--rule);border-radius:0 14px 14px 14px;padding:18px}
+.hidden{display:none!important}
+.status{font-size:13px;color:var(--muted)}
+.status b{color:var(--ok)}.status i{color:var(--red);font-style:normal}
+.start{text-align:center;padding:40px 10px}
+.start p{max-width:560px;margin:10px auto;color:var(--muted)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.toolbar input,.toolbar select,.f input,.f select,.f textarea{border:1px solid var(--rule);background:var(--bg);border-radius:10px;padding:7px 12px;width:100%}
+.toolbar input{flex:1;min-width:160px;width:auto}.toolbar select{width:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+.card{border:1px solid var(--rule);border-radius:14px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.card.off{opacity:.55}
+.card .im{aspect-ratio:3/4;background:var(--rule) center/cover;position:relative}
+.card .im span{position:absolute;top:6px;inset-inline-start:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:1px 8px;border-radius:99px}
+.card .tx{padding:8px 10px;flex:1}
+.card .tx b{display:block;font-size:14px}.card .tx small{color:var(--muted)}
+.card .ac{display:flex;gap:4px;padding:0 8px 8px;flex-wrap:wrap}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 16px}
+.f label{display:block;font-size:13px;color:var(--muted);margin-bottom:2px}
+.f .w{grid-column:1/-1}
+.f input[type=color]{padding:2px;height:38px}
+.f input[type=checkbox]{width:auto}
+h3{margin:22px 0 10px;color:var(--gold-d);font-size:16px}h3:first-child{margin-top:0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px}
+.modal .box{background:var(--paper);border-radius:16px;max-width:760px;width:100%;padding:20px;border:1px solid var(--gold)}
+.drop{border:2px dashed var(--rule);border-radius:12px;padding:12px;text-align:center;color:var(--muted);font-size:13px}
+.files{width:100%;border-collapse:collapse;font-size:14px}
+.files td,.files th{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:start}
+.thumbmini{width:56px;height:74px;border-radius:8px;background:var(--rule) center/cover;border:1px solid var(--rule)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 20px;border-radius:99px;z-index:99;opacity:0;transition:.3s;pointer-events:none;max-width:90vw}
+#toast.show{opacity:1}
+.note{background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--muted);margin:12px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="hTitle">لوحة التحكم</h1>
+  <span class="status" id="stat"></span>
+  <button class="btn" id="bOpen">📁 اختيار مجلد الموقع</button>
+  <button class="btn" id="bFile">فتح site-data.json</button>
+  <button class="btn fill" id="bSave" disabled>💾 حفظ</button>
+</header>
+<input type="file" id="fJson" accept=".json,application/json" class="hidden">
+
+<div id="start" class="start">
+  <h2>أهلاً بك</h2>
+  <p>اختر <b>مجلد الموقع</b> (المجلد الذي فيه index.html و templates) فتفتح اللوحة بياناتك وتعدّل الملفات مباشرةً داخله.</p>
+  <p>تحتاج متصفح Chrome أو Edge على الكمبيوتر. إن لم يكن متاحاً، افتح ملف site-data.json وستحصل في النهاية على ملف ZIP جاهز.</p>
+  <p><button class="btn fill" id="bOpen2">📁 اختيار مجلد الموقع</button></p>
+</div>
+
+<div id="app" class="hidden">
+<nav>
+  <button data-t="tpl" class="on">القوالب</button>
+  <button data-t="files">الملفات</button>
+  <button data-t="site">معلومات الموقع</button>
+</nav>
+<main>
+
+<!-- القوالب -->
+<section class="panel" id="t-tpl">
+  <div class="toolbar">
+    <input id="q" placeholder="بحث بالاسم أو الرقم…">
+    <select id="catF"></select>
+    <button class="btn fill" id="bAdd">＋ قالب جديد</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</section>
+
+<!-- الملفات -->
+<section class="panel hidden" id="t-files">
+  <div class="toolbar">
+    <select id="dirSel" style="min-width:200px"></select>
+    <input id="dirCustom" placeholder="أو اكتب مساراً مثل audio أو brand">
+    <button class="btn" id="bDirGo">عرض</button>
+  </div>
+  <div class="drop">ارفع أي ملفات (صور، فيديو، صوت، html، css، js) إلى المجلد المعروض
+    <br><input type="file" id="upAny" multiple style="margin-top:8px"></div>
+  <p class="status" id="dirPath"></p>
+  <table class="files"><thead><tr><th>الاسم</th><th>الحجم</th><th></th></tr></thead><tbody id="fl"></tbody></table>
+</section>
+
+<!-- معلومات الموقع -->
+<section class="panel hidden" id="t-site">
+  <h3>الهوية</h3>
+  <div class="f">
+    <div><label>اسم الموقع</label><input data-s="name"></div>
+    <div><label>الشعار الفرعي</label><input data-s="tagline"></div>
+    <div><label>مسار الشعار</label><input data-s="logo" dir="ltr"></div>
+    <div><label>مسار الأيقونة (favicon)</label><input data-s="favicon" dir="ltr"></div>
+    <div class="w"><label>رفع شعار جديد (يُحفظ في brand/logo.png)</label><input type="file" id="upLogo" accept="image/*"></div>
+  </div>
+  <h3>الطلب والتواصل</h3>
+  <div class="f">
+    <div><label>رقم واتساب (بصيغة دولية بدون +، مثال 9647701234567)</label><input data-s="whatsapp" dir="ltr"></div>
+    <div><label>رابط إنستغرام</label><input data-s="instagram" dir="ltr"></div>
+    <div><label>نص زر الطلب</label><input data-s="orderButton"></div>
+    <div><label>رسالة الطلب الجاهزة (واتساب)</label><input data-s="orderMessage"></div>
+  </div>
+  <h3>السعر</h3>
+  <div class="f">
+    <div><label>السعر الافتراضي للقالب</label><input type="number" data-s="price" dir="ltr"></div>
+    <div><label>العملة</label><input data-s="currency"></div>
+  </div>
+  <h3>الألوان والنصوص</h3>
+  <div class="f">
+    <div><label>لون الذهب (الأساسي)</label><input type="color" data-s="primaryColor"></div>
+    <div><label>لون الخلفية</label><input type="color" data-s="bgColor"></div>
+    <div><label>لون النص</label><input type="color" data-s="inkColor"></div>
+    <div class="w"><label>نص أسفل الصفحة</label><input data-s="footer"></div>
+    <div class="w"><label>الأقسام (افصل بينها بفاصلة، وهي تظهر كأزرار فلترة)</label><input id="catList"></div>
+  </div>
+</section>
+</main>
+</div>
+
+<!-- نافذة القالب -->
+<div class="modal hidden" id="modal"><div class="box">
+  <h3 id="mTitle">قالب</h3>
+  <div class="f">
+    <div><label>المعرّف (إنجليزي بلا مسافات، يُستخدم اسماً للمجلد)</label><input id="m_id" dir="ltr"></div>
+    <div><label>اسم القالب</label><input id="m_title"></div>
+    <div><label>القسم</label><select id="m_cat"></select></div>
+    <div><label>السعر</label><input id="m_price" type="number" dir="ltr"></div>
+    <div class="w"><label>وصف قصير</label><textarea id="m_desc" rows="2"></textarea></div>
+    <div><label>ملف صفحة المعاينة</label><input id="m_prev" dir="ltr"></div>
+    <div><label>مسار الصورة المصغّرة</label><input id="m_thumb" dir="ltr"></div>
+    <div class="w"><label><input type="checkbox" id="m_active"> ظاهر في المعرض</label></div>
+  </div>
+  <h3>ملفات القالب</h3>
+  <div class="f">
+    <div><label>صورة مصغّرة جديدة</label><input type="file" id="u_thumb" accept="image/*"></div>
+    <div><label>صفحة index.html الرئيسية</label><input type="file" id="u_html" accept=".html,.htm"></div>
+    <div><label>ملفات إضافية (صور، فيديو، صوت، css، js)</label><input type="file" id="u_more" multiple></div>
+    <div><label>أو ارفع مجلد القالب كاملاً</label><input type="file" id="u_dir" webkitdirectory multiple></div>
+  </div>
+  <p class="status" id="m_up"></p>
+  <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+    <button class="btn fill" id="m_ok">تم</button>
+    <button class="btn" id="m_cancel">إلغاء</button>
+    <span style="flex:1"></span>
+    <label id="m_delwrap" class="status hidden"><input type="checkbox" id="m_delfiles"> حذف مجلد القالب أيضاً</label>
+    <button class="btn red hidden" id="m_del">حذف القالب</button>
+  </div>
+</div></div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let data=null, root=null, staged=new Map(), dirty=false, editing=null, isNew=false, pending=new Map(), urlCache=new Map();
+
+const DEFAULT={site:{name:'INVITO',tagline:'',logo:'brand/logo.png',favicon:'favicon.ico',price:20000,currency:'د.ع',whatsapp:'',instagram:'',orderButton:'اطلب دعوتك',orderMessage:'مرحباً، أرغب بطلب دعوة إلكترونية من قالب:',primaryColor:'#B9955E',bgColor:'#F7F2EA',inkColor:'#3A322A',footer:''},categories:[],templates:[]};
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2600)}
+function setDirty(v){dirty=v;$('#bSave').disabled=!data;$('#bSave').textContent=root?(v?'💾 حفظ التغييرات *':'💾 حفظ'):'⬇ تنزيل ZIP';updStat()}
+function updStat(){$('#stat').innerHTML=!data?'':root?`<b>● متصل بالمجلد</b>${dirty?' · <i>تغييرات غير محفوظة</i>':''}`:`<i>● وضع بلا مجلد</i> — سيُنزَّل ZIP`}
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+
+/* ---------- نظام الملفات ---------- */
+async function getDir(path,create){let d=root;for(const p of path.split('/').filter(Boolean)){d=await d.getDirectoryHandle(p,{create:!!create})}return d}
+async function putFile(path,blob){
+  path=path.replace(/^\/+/,'');
+  if(urlCache.has(path)){URL.revokeObjectURL(urlCache.get(path));urlCache.delete(path)}
+  if(root){const i=path.lastIndexOf('/');const d=await getDir(path.slice(0,i),true);const fh=await d.getFileHandle(path.slice(i+1),{create:true});const w=await fh.createWritable();await w.write(blob);await w.close()}
+  else staged.set(path,blob);
+}
+async function readFile(path){
+  if(staged.has(path))return staged.get(path);
+  if(root){try{const i=path.lastIndexOf('/');const d=await getDir(path.slice(0,i));return await (await d.getFileHandle(path.slice(i+1))).getFile()}catch(e){return null}}
+  return null;
+}
+async function srcFor(path){
+  if(!path)return '';
+  if(urlCache.has(path))return urlCache.get(path);
+  const f=await readFile(path);
+  if(f){const u=URL.createObjectURL(f);urlCache.set(path,u);return u}
+  return root?'':path;
+}
+async function listDir(path){
+  const out=[];
+  if(root){try{const d=await getDir(path);for await(const [n,h] of d.entries()){if(h.kind==='file'){const f=await h.getFile();out.push({name:n,size:f.size})}else out.push({name:n+'/',size:0,dir:true})}}catch(e){}}
+  for(const [p,b] of staged){if(p.startsWith(path+'/')&&!p.slice(path.length+1).includes('/'))out.push({name:p.slice(path.length+1),size:b.size})}
+  return out.sort((a,b)=>a.name.localeCompare(b.name));
+}
+async function delFile(path){
+  urlCache.delete(path);
+  if(staged.delete(path))return;
+  if(root){const i=path.lastIndexOf('/');const d=await getDir(path.slice(0,i));await d.removeEntry(path.slice(i+1))}
+}
+const fmt=n=>n>1048576?(n/1048576).toFixed(1)+' MB':n>1024?Math.round(n/1024)+' KB':n+' B';
+
+/* ---------- تحميل البيانات ---------- */
+function norm(d){d=d||{};d.site=Object.assign({},DEFAULT.site,d.site);d.categories=d.categories||[];d.templates=d.templates||[];return d}
+function enter(){$('#start').classList.add('hidden');$('#app').classList.remove('hidden');$('#hTitle').textContent='لوحة تحكم '+(data.site.name||'');setDirty(false);renderAll()}
+async function openFolder(){
+  if(!window.showDirectoryPicker){toast('المتصفح لا يدعم اختيار المجلد. استخدم Chrome أو Edge، أو افتح ملف site-data.json');return}
+  try{root=await window.showDirectoryPicker({mode:'readwrite'})}catch(e){return}
+  staged.clear();urlCache.clear();
+  try{const fh=await root.getFileHandle('site-data.json');data=norm(JSON.parse(await (await fh.getFile()).text()))}
+  catch(e){data=norm(JSON.parse(JSON.stringify(DEFAULT)));toast('لم أجد site-data.json — سيُنشأ عند أول حفظ')}
+  enter();
+  if(!data.templates.length)await scanTemplates();
+}
+async function scanTemplates(){
+  try{const d=await getDir('templates');let n=0;
+   for await(const [name,h] of d.entries()){if(h.kind!=='directory'||data.templates.some(t=>t.id===name))continue;
+     const m=name.match(/^([a-z]+)/i);data.templates.push({id:name,title:name,category:data.categories[0]||'',description:'',thumbnail:`templates/${name}/thumbnail.webp`,preview:`templates/${name}/index.html`,price:data.site.price,active:true,order:data.templates.length+1});n++}
+   if(n){toast(`أُضيف ${n} قالب من مجلد templates`);setDirty(true);renderAll()}}catch(e){}
+}
+$('#fJson').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{data=norm(JSON.parse(await f.text()));root=null;staged.clear();urlCache.clear();enter()}catch(x){toast('الملف غير صالح')}e.target.value=''};
+$('#bOpen').onclick=$('#bOpen2').onclick=openFolder;
+$('#bFile').onclick=()=>$('#fJson').click();
+
+/* ---------- حفظ ---------- */
+$('#bSave').onclick=async()=>{
+  if(!data)return;
+  collectSite();
+  const json=JSON.stringify(data,null,1);
+  if(root){try{await putFile('site-data.json',new Blob([json],{type:'application/json'}));setDirty(false);toast('تم الحفظ داخل المجلد ✓')}catch(e){toast('تعذّر الحفظ: '+e.message)}return}
+  if(!window.JSZip){toast('تعذّر تحميل مكتبة ZIP (تحتاج اتصالاً بالإنترنت)');return}
+  const z=new JSZip();z.file('site-data.json',json);for(const [p,b] of staged)z.file(p,b);
+  const blob=await z.generateAsync({type:'blob'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='site-update.zip';a.click();
+  setDirty(false);toast('انسخ محتوى الـ ZIP إلى مجلد الموقع واستبدل الملفات');
+};
+
+/* ---------- التبويبات ---------- */
+$$('nav button').forEach(b=>b.onclick=()=>{$$('nav button').forEach(x=>x.classList.toggle('on',x===b));['tpl','files','site'].forEach(t=>$('#t-'+t).classList.toggle('hidden',t!==b.dataset.t));if(b.dataset.t==='files')fillDirSel();if(b.dataset.t==='site')fillSite()});
+
+/* ---------- القوالب ---------- */
+function cats(){return data.categories.length?data.categories:[...new Set(data.templates.map(t=>t.category))]}
+function renderAll(){fillCatF();renderGrid();fillSite()}
+function fillCatF(){const v=$('#catF').value;$('#catF').innerHTML='<option value="">كل الأقسام</option>'+cats().map(c=>`<option>${esc(c)}</option>`).join('');$('#catF').value=v}
+$('#q').oninput=$('#catF').onchange=renderGrid;
+function renderGrid(){
+  const q=$('#q').value.trim().toLowerCase(),c=$('#catF').value;
+  const list=data.templates.slice().sort((a,b)=>(a.order||0)-(b.order||0)).filter(t=>(!c||t.category===c)&&(!q||(t.title+t.id).toLowerCase().includes(q)));
+  $('#grid').innerHTML=list.map(t=>`<div class="card ${t.active===false?'off':''}" data-id="${esc(t.id)}"><div class="im" data-src="${esc(t.thumbnail)}"><span>${esc(t.category)}</span></div><div class="tx"><b>${esc(t.title)}</b><small dir="ltr">${esc(t.id)}</small></div><div class="ac"><button class="btn sm" data-a="edit">تعديل</button><button class="btn sm" data-a="up">▲</button><button class="btn sm" data-a="down">▼</button></div></div>`).join('')||'<p class="status">لا توجد قوالب.</p>';
+  $$('#grid .im').forEach(async el=>{const u=await srcFor(el.dataset.src);if(u)el.style.backgroundImage=`url("${u}")`});
+}
+$('#grid').onclick=e=>{const b=e.target.closest('button');if(!b)return;const id=b.closest('.card').dataset.id;
+  if(b.dataset.a==='edit')openModal(id);
+  else{const L=data.templates.slice().sort((a,b)=>(a.order||0)-(b.order||0));L.forEach((t,i)=>t.order=i+1);const i=L.findIndex(t=>t.id===id),j=b.dataset.a==='up'?i-1:i+1;if(j<0||j>=L.length)return;[L[i].order,L[j].order]=[L[j].order,L[i].order];setDirty(true);renderGrid()}};
+$('#bAdd').onclick=()=>openModal(null);
+
+function openModal(id){
+  isNew=!id;pending=new Map();
+  const t=id?data.templates.find(x=>x.id===id):{id:'',title:'',category:cats()[0]||'',description:'',price:data.site.price,active:true,preview:'',thumbnail:''};
+  editing=t;
+  $('#mTitle').textContent=isNew?'قالب جديد':'تعديل: '+t.title;
+  $('#m_id').value=t.id;$('#m_id').disabled=!isNew;
+  $('#m_title').value=t.title;$('#m_desc').value=t.description||'';$('#m_price').value=t.price??'';
+  $('#m_cat').innerHTML=cats().map(c=>`<option>${esc(c)}</option>`).join('');$('#m_cat').value=t.category;
+  $('#m_prev').value=t.preview||'';$('#m_thumb').value=t.thumbnail||'';$('#m_active').checked=t.active!==false;
+  ['u_thumb','u_html','u_more','u_dir'].forEach(i=>$('#'+i).value='');$('#m_up').textContent='';
+  $('#m_del').classList.toggle('hidden',isNew);$('#m_delwrap').classList.toggle('hidden',isNew||!root);$('#m_delfiles').checked=false;
+  $('#modal').classList.remove('hidden');
+}
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'');
+function tid(){return slug($('#m_id').value)||'new-template'}
+function queue(path,file){pending.set(path,file);$('#m_up').textContent=`ملفات بانتظار الحفظ: ${pending.size}`}
+$('#u_thumb').onchange=e=>{const f=e.target.files[0];if(!f)return;const ext=(f.name.split('.').pop()||'webp').toLowerCase();const p=`templates/${tid()}/thumbnail.${ext}`;queue(p,f);$('#m_thumb').value=p};
+$('#u_html').onchange=e=>{const f=e.target.files[0];if(!f)return;const p=`templates/${tid()}/index.html`;queue(p,f);$('#m_prev').value=p};
+$('#u_more').onchange=e=>{[...e.target.files].forEach(f=>queue(`templates/${tid()}/${f.name}`,f))};
+$('#u_dir').onchange=e=>{[...e.target.files].forEach(f=>{const rel=f.webkitRelativePath.split('/').slice(1).join('/');if(rel&&!rel.startsWith('.'))queue(`templates/${tid()}/${rel}`,f)});
+  const has=n=>pending.has(`templates/${tid()}/${n}`);
+  if(has('index.html'))$('#m_prev').value=`templates/${tid()}/index.html`;
+  const th=[...pending.keys()].find(k=>/\/thumbnail\.[a-z]+$/.test(k));if(th)$('#m_thumb').value=th};
+$('#m_cancel').onclick=()=>$('#modal').classList.add('hidden');
+$('#m_ok').onclick=async()=>{
+  const id=tid(),title=$('#m_title').value.trim();
+  if(!title){toast('اكتب اسم القالب');return}
+  if(isNew&&data.templates.some(t=>t.id===id)){toast('هذا المعرّف مستخدم');return}
+  const t=editing;
+  Object.assign(t,{id,title,category:$('#m_cat').value,description:$('#m_desc').value.trim(),price:Number($('#m_price').value)||data.site.price,active:$('#m_active').checked,preview:$('#m_prev').value.trim()||`templates/${id}/index.html`,thumbnail:$('#m_thumb').value.trim()||`templates/${id}/thumbnail.webp`});
+  if(isNew){t.order=data.templates.length+1;data.templates.push(t)}
+  try{for(const [p,f] of pending)await putFile(p,f)}catch(e){toast('تعذّر حفظ ملف: '+e.message)}
+  $('#modal').classList.add('hidden');setDirty(true);renderGrid();toast(pending.size?`تم — رُفع ${pending.size} ملف`:'تم');
+};
+$('#m_del').onclick=async()=>{
+  if(!confirm('حذف القالب «'+editing.title+'» من المعرض؟'))return;
+  if(root&&$('#m_delfiles').checked){try{await (await getDir('templates')).removeEntry(editing.id,{recursive:true})}catch(e){toast('تعذّر حذف المجلد')}}
+  data.templates=data.templates.filter(t=>t!==editing);$('#modal').classList.add('hidden');setDirty(true);renderGrid();
+};
+
+/* ---------- الملفات ---------- */
+function fillDirSel(){
+  const base=['brand','audio','templates',...data.templates.map(t=>'templates/'+t.id)];
+  $('#dirSel').innerHTML=base.map(p=>`<option>${esc(p)}</option>`).join('');showDir()}
+$('#bDirGo').onclick=()=>{const c=$('#dirCustom').value.trim().replace(/^\/+|\/+$/g,'');showDir(c||$('#dirSel').value)};
+$('#dirSel').onchange=()=>{$('#dirCustom').value='';showDir()};
+let curDir='';
+async function showDir(p){
+  curDir=p||$('#dirSel').value;$('#dirPath').textContent='المجلد: /'+curDir;
+  const L=await listDir(curDir);
+  $('#fl').innerHTML=L.map(f=>`<tr><td dir="ltr" style="text-align:right">${f.dir?'📁':'📄'} ${esc(f.name)}</td><td>${f.dir?'':fmt(f.size)}</td><td>${f.dir?`<button class="btn sm" data-open="${esc(f.name)}">فتح</button>`:`<button class="btn sm" data-view="${esc(f.name)}">عرض</button> <button class="btn sm red" data-del="${esc(f.name)}">حذف</button>`}</td></tr>`).join('')||'<tr><td colspan="3" class="status">المجلد فارغ أو غير موجود.</td></tr>';
+}
+$('#fl').onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.open)return showDir(curDir+'/'+b.dataset.open.replace(/\/$/,''));
+  const path=curDir+'/'+(b.dataset.view||b.dataset.del);
+  if(b.dataset.view){const u=await srcFor(path);if(u)window.open(u,'_blank')}
+  else if(confirm('حذف '+path+'؟')){try{await delFile(path);showDir(curDir);toast('تم الحذف')}catch(x){toast('تعذّر الحذف')}}};
+$('#upAny').onchange=async e=>{let n=0;for(const f of e.target.files){try{await putFile(curDir+'/'+f.name,f);n++}catch(x){toast('فشل: '+f.name)}}e.target.value='';if(n){toast(`رُفع ${n} ملف`);if(!root)setDirty(true);showDir(curDir)}};
+
+/* ---------- معلومات الموقع ---------- */
+function fillSite(){
+  $$('[data-s]').forEach(i=>{i.value=data.site[i.dataset.s]??''});
+  $('#catList').value=cats().join('، ');
+}
+function collectSite(){
+  $$('[data-s]').forEach(i=>{data.site[i.dataset.s]=i.type==='number'?Number(i.value)||0:i.value.trim()});
+  const list=$('#catList').value.split(/[،,]/).map(s=>s.trim()).filter(Boolean);
+  if(list.length)data.categories=list;
+}
+$$('[data-s]').forEach(i=>i.oninput=()=>{if(data){collectSite();setDirty(true)}});
+$('#catList').oninput=()=>{collectSite();setDirty(true);fillCatF()};
+$('#upLogo').onchange=async e=>{const f=e.target.files[0];if(!f)return;const ext=(f.name.split('.').pop()||'png').toLowerCase();const p='brand/logo.'+ext;await putFile(p,f);data.site.logo=p;fillSite();setDirty(true);toast('تم رفع الشعار')};
+})();
+</script>
+</body>
+</html>
