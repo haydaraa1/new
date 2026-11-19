@@ -133,6 +133,9 @@ h3{margin:22px 0 10px;color:var(--gold-d);font-size:16px}h3:first-child{margin-t
 <header>
   <h1 id="hTitle">لوحة التحكم</h1>
   <span class="status" id="stat"></span>
+  <button class="btn" id="bLogout" type="button">
+  تسجيل الخروج
+</button>
   <button class="btn" id="bOpen">📁 اختيار مجلد الموقع</button>
   <button class="btn" id="bFile">فتح site-data.json</button>
   <button class="btn fill" id="bSave" disabled>💾 حفظ</button>
@@ -501,7 +504,23 @@ $('#upLogo').onchange=async e=>{const f=e.target.files[0];if(!f)return;const ext
     submit.disabled = false;
     submit.textContent = 'تسجيل الدخول';
   });
+const logout = document.getElementById('bLogout');
 
+logout.addEventListener('click', async function () {
+  logout.disabled = true;
+
+  const { error } = await client.auth.signOut();
+
+  document.body.classList.remove('authenticated');
+
+  document.getElementById('authPassword').value = '';
+
+  if (error) {
+    message.textContent = 'تعذّر تسجيل الخروج.';
+  }
+
+  logout.disabled = false;
+});
   client.auth.getSession().then(({ data, error }) => {
     if (error) {
       message.textContent = 'تعذّر استعادة الجلسة.';
