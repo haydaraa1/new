@@ -495,8 +495,8 @@ $('#upLogo').onchange=async e=>{const f=e.target.files[0];if(!f)return;const ext
       });
 
     if (error) {
-      message.textContent =
-        'فشل تسجيل الدخول. تحقق من البريد وكلمة المرور.';
+     message.textContent =
+  'خطأ Supabase: ' + error.message;
     } else {
       await verifyAdmin(data.session);
     }
